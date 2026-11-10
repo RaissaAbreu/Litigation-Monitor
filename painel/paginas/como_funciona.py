@@ -22,9 +22,9 @@ PASSOS = [
                       "liminar, audiência, intimação, citação, trânsito em julgado, decisões e arquivamento."),
     ("Prazos", "Para os eventos com prazo típico, o sistema estima o vencimento em dias úteis. O analista confirma ou "
                "corrige a data no painel."),
-    ("Alertas", "O n8n envia ao Microsoft Teams as movimentações relevantes e os prazos próximos, de hoje ou vencidos; "
+    ("Alertas", "O n8n envia por e-mail (Gmail) as movimentações relevantes e os prazos próximos, de hoje ou vencidos; "
                 "tudo também aparece no painel."),
-    ("Relatórios", "Resumo diário no Teams às 7h30 e relatório semanal (PDF + Excel) às segundas, 8h. "
+    ("Relatórios", "Resumo diário por e-mail às 7h30 e relatório semanal (PDF + Excel) às segundas, 8h. "
                    "O painel gera o mesmo relatório a qualquer momento."),
 ]
 
@@ -68,7 +68,7 @@ def renderizar() -> None:
             </ul>""")
     with col2:
         with st.container(border=True, key="cartao-alertas"):
-            estilo.titulo_cartao(None, "Quando o Teams é avisado")
+            estilo.titulo_cartao(None, "Quando o e-mail é enviado")
             estilo.html(f"""<ul class="lm-lista">
               <li>{estilo.badge('Nova movimentação', 'azul')} uma vez, se a relevância for
                   {escape(config.relevancia_minima_alerta().lower())} ou maior.</li>

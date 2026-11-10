@@ -8,7 +8,8 @@ x-lm-env: &lm-env
   TZ: America/Sao_Paulo
   LM_FONTE: ${LM_FONTE:-demo}
   DATAJUD_API_KEY: ${DATAJUD_API_KEY:-}
-  TEAMS_WEBHOOK_URL: ${TEAMS_WEBHOOK_URL:-}
+  GMAIL_USUARIO: ${GMAIL_USUARIO:-}
+  EMAIL_ALERTAS: ${EMAIL_ALERTAS:-}
   LM_URL_PAINEL: ${LM_URL_PAINEL:-http://localhost:8501}
   LM_URL_API: ${LM_URL_API:-http://localhost:8000}
   LM_PLANILHA: ${LM_PLANILHA:-}
@@ -47,17 +48,18 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Importa (ou atualiza) os workflows de n8n/workflows e os ativa; depois encerra.
+  # Cria a credencial do Gmail, importa (ou atualiza) os workflows de n8n/workflows e os ativa; depois encerra.
   n8n-importar:
     image: docker.n8n.io/n8nio/n8n:${N8N_VERSAO:-1.123.93}
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - n8n import:workflow --separate --input=/workflows && n8n update:workflow --all --active=true
+    entrypoint: ["/bin/sh", "/importar.sh"]
     environment:
       GENERIC_TIMEZONE: America/Sao_Paulo
+      GMAIL_USUARIO: ${GMAIL_USUARIO:-}
+      GMAIL_SENHA_APP: ${GMAIL_SENHA_APP:-}
     volumes:
       - n8n_dados:/home/node/.n8n
       - ./n8n/workflows:/workflows:ro
+      - ./n8n/importar.sh:/importar.sh:ro
     restart: "no"
 
   n8n:

@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS notificacoes (
     movimentacao_id  INTEGER REFERENCES movimentacoes(id) ON DELETE CASCADE,
     tipo             TEXT NOT NULL,
     situacao         TEXT NOT NULL,
-    destino          TEXT NOT NULL DEFAULT 'Microsoft Teams',
+    destino          TEXT NOT NULL DEFAULT 'E-mail',
     criado_em        TEXT NOT NULL
 );
 
@@ -315,7 +315,7 @@ def listar_consultas(limite: int = 20) -> list[dict[str, Any]]:
 
 
 def inserir_notificacao(processo_id: int | None, movimentacao_id: int | None, tipo: str, situacao: str,
-                        destino: str = "Microsoft Teams") -> int:
+                        destino: str = "E-mail") -> int:
     with conexao() as con:
         cur = con.execute(
             "INSERT INTO notificacoes (processo_id, movimentacao_id, tipo, situacao, destino, criado_em) "

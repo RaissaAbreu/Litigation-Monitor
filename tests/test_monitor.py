@@ -120,11 +120,18 @@ def test_fonte_com_erro_marca_processo():
     assert p["situacao_consulta"] == "erro" and "504" in p["erro_consulta"]
 
 
-def test_cartao_teams_tem_link_para_o_processo(monkeypatch):
-    monkeypatch.setenv("TEAMS_WEBHOOK_URL", "https://exemplo.invalid/webhook")
+def test_email_de_alerta_tem_destino_assunto_e_link(monkeypatch):
+    monkeypatch.setenv("GMAIL_USUARIO", "monitor@gmail.com")
     seed.carregar_demo()
     alerta = monitor.alertas_pendentes()[0]
-    assert alerta["webhook_url"] == "https://exemplo.invalid/webhook"
-    cartao = alerta["payload"]["attachments"][0]["content"]
-    assert cartao["type"] == "AdaptiveCard"
-    assert "?processo=" in cartao["actions"][0]["url"]
+    email = alerta["email"]
+    assert email["de"] == email["para"] == "monitor@gmail.com"        # sem EMAIL_ALERTAS, envia para si mesmo
+    assert alerta["numero"] in email["assunto"]
+    assert "?processo=" in email["html"] and "PROVIDÊNCIA SUGERIDA" in email["html"]
+    monkeypatch.setenv("EMAIL_ALERTAS", "equipe@exemplo.com, chefe@exemplo.com")
+    assert monitor.alertas_pendentes()[0]["email"]["para"] == "equipe@exemplo.com, chefe@exemplo.com"
+
+
+def test_sem_gmail_o_destino_fica_vazio():
+    seed.carregar_demo()
+    assert monitor.alertas_pendentes()[0]["email"]["para"] == ""

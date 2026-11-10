@@ -60,8 +60,8 @@
           },
           "conditions": [
             {
-              "id": "canal-teams",
-              "leftValue": "={{ $json.webhook_url }}",
+              "id": "canal-email",
+              "leftValue": "={{ $json.email.para }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -74,34 +74,40 @@
         },
         "options": {}
       },
-      "name": "Tem canal do Teams?",
+      "name": "Tem e-mail configurado?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
         480,
         300
       ],
-      "id": "241e2d0b-6a12-5526-9ef3-e24799f75e1e"
+      "id": "48edec50-cdbb-5daf-a94d-6d6435138e1b"
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $json.webhook_url }}",
+        "fromEmail": "={{ $json.email.de }}",
+        "toEmail": "={{ $json.email.para }}",
+        "subject": "={{ $json.email.assunto }}",
+        "emailFormat": "html",
+        "html": "={{ $json.email.html }}",
         "options": {
-          "timeout": 30000
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.payload) }}"
+          "appendAttribution": false
+        }
       },
-      "name": "Enviar relatório ao Teams",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "Enviar relatório por e-mail",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
       "position": [
         720,
         200
       ],
-      "id": "e9ae499d-7a73-51a0-a006-d35490b67432",
+      "id": "876575b3-d0aa-5910-97f1-762e57d2ba61",
+      "credentials": {
+        "smtp": {
+          "id": "LitMonitorGmail01",
+          "name": "Gmail (Litigation Monitor)"
+        }
+      },
       "onError": "continueRegularOutput"
     },
     {
@@ -113,7 +119,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ tipo: 'relatorio_semanal', situacao: ($json.error ? 'falha' : 'enviada'), movimentacao_id: null, destino: 'Microsoft Teams' }) }}"
+        "jsonBody": "={{ JSON.stringify({ tipo: 'relatorio_semanal', situacao: ($json.error ? 'falha' : 'enviada'), movimentacao_id: null, destino: 'Gmail' }) }}"
       },
       "name": "Registrar envio",
       "type": "n8n-nodes-base.httpRequest",
@@ -133,7 +139,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ tipo: 'relatorio_semanal', situacao: 'sem_canal', movimentacao_id: null, destino: 'Microsoft Teams' }) }}"
+        "jsonBody": "={{ JSON.stringify({ tipo: 'relatorio_semanal', situacao: 'sem_canal', movimentacao_id: null, destino: 'Gmail' }) }}"
       },
       "name": "Registrar sem canal",
       "type": "n8n-nodes-base.httpRequest",
@@ -172,18 +178,18 @@
       "main": [
         [
           {
-            "node": "Tem canal do Teams?",
+            "node": "Tem e-mail configurado?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Tem canal do Teams?": {
+    "Tem e-mail configurado?": {
       "main": [
         [
           {
-            "node": "Enviar relatório ao Teams",
+            "node": "Enviar relatório por e-mail",
             "type": "main",
             "index": 0
           }
@@ -197,7 +203,7 @@
         ]
       ]
     },
-    "Enviar relatório ao Teams": {
+    "Enviar relatório por e-mail": {
       "main": [
         [
           {

@@ -57,8 +57,14 @@ def caminho_planilha() -> str:
     return os.getenv("LM_PLANILHA", "").strip()
 
 
-def teams_webhook() -> str:
-    return os.getenv("TEAMS_WEBHOOK_URL", "").strip()
+def email_remetente() -> str:
+    """Conta Gmail que envia os alertas (a mesma da senha de app configurada no n8n)."""
+    return os.getenv("GMAIL_USUARIO", "").strip()
+
+
+def email_destino() -> str:
+    """Destinatários dos alertas (separe vários com vírgula). Padrão: a própria conta remetente."""
+    return os.getenv("EMAIL_ALERTAS", "").strip() or email_remetente()
 
 
 def url_painel() -> str:
@@ -66,7 +72,7 @@ def url_painel() -> str:
 
 
 def url_api_publica() -> str:
-    """Endereço da API acessível por quem recebe o cartão do Teams (links de download dos relatórios)."""
+    """Endereço da API acessível por quem recebe o e-mail (links de download dos relatórios)."""
     return os.getenv("LM_URL_API", "http://localhost:8000").rstrip("/")
 
 

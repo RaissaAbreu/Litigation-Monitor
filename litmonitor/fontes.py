@@ -136,6 +136,12 @@ class FonteDataJud:
                     if dados is not None and not (shards.get("failed") and not dados.get("hits", {}).get("hits")):
                         return interpretar_resposta_datajud(dados)
                     ultimo_erro = "resposta incompleta do DataJud (sobrecarga)"
+                elif resposta.status_code == 429:
+                    ultimo_erro = "limite de requisições atingido (HTTP 429) — tente mais tarde"
+                    if tentativa < config.datajud_tentativas():
+                        espera = resposta.headers.get("Retry-After", "")
+                        time.sleep(float(espera) if espera.isdigit() else self._pausa * 5 * tentativa)
+                        continue
                 else:
                     ultimo_erro = f"HTTP {resposta.status_code}"
             if tentativa < config.datajud_tentativas():

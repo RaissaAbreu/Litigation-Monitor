@@ -1,6 +1,6 @@
 {
   "id": "LitMonitorResumo01",
-  "name": "LITIGATION MONITOR — Resumo diário no Teams",
+  "name": "LITIGATION MONITOR — Resumo diário por e-mail",
   "nodes": [
     {
       "parameters": {
@@ -60,8 +60,8 @@
           },
           "conditions": [
             {
-              "id": "canal-teams",
-              "leftValue": "={{ $json.webhook_url }}",
+              "id": "canal-email",
+              "leftValue": "={{ $json.email.para }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -74,34 +74,40 @@
         },
         "options": {}
       },
-      "name": "Tem canal do Teams?",
+      "name": "Tem e-mail configurado?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
         480,
         300
       ],
-      "id": "241e2d0b-6a12-5526-9ef3-e24799f75e1e"
+      "id": "48edec50-cdbb-5daf-a94d-6d6435138e1b"
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $json.webhook_url }}",
+        "fromEmail": "={{ $json.email.de }}",
+        "toEmail": "={{ $json.email.para }}",
+        "subject": "={{ $json.email.assunto }}",
+        "emailFormat": "html",
+        "html": "={{ $json.email.html }}",
         "options": {
-          "timeout": 30000
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.payload) }}"
+          "appendAttribution": false
+        }
       },
-      "name": "Enviar resumo ao Teams",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "Enviar resumo por e-mail",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
       "position": [
         720,
         200
       ],
-      "id": "5e5cdd26-00c8-5186-83ac-4c3082adda4d",
+      "id": "eeeea2bf-d506-5167-9475-fc4a82776bbb",
+      "credentials": {
+        "smtp": {
+          "id": "LitMonitorGmail01",
+          "name": "Gmail (Litigation Monitor)"
+        }
+      },
       "onError": "continueRegularOutput"
     },
     {
@@ -113,7 +119,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ tipo: 'resumo_diario', situacao: ($json.error ? 'falha' : 'enviada'), movimentacao_id: null, destino: 'Microsoft Teams' }) }}"
+        "jsonBody": "={{ JSON.stringify({ tipo: 'resumo_diario', situacao: ($json.error ? 'falha' : 'enviada'), movimentacao_id: null, destino: 'Gmail' }) }}"
       },
       "name": "Registrar envio",
       "type": "n8n-nodes-base.httpRequest",
@@ -133,7 +139,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ tipo: 'resumo_diario', situacao: 'sem_canal', movimentacao_id: null, destino: 'Microsoft Teams' }) }}"
+        "jsonBody": "={{ JSON.stringify({ tipo: 'resumo_diario', situacao: 'sem_canal', movimentacao_id: null, destino: 'Gmail' }) }}"
       },
       "name": "Registrar sem canal",
       "type": "n8n-nodes-base.httpRequest",
@@ -172,18 +178,18 @@
       "main": [
         [
           {
-            "node": "Tem canal do Teams?",
+            "node": "Tem e-mail configurado?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Tem canal do Teams?": {
+    "Tem e-mail configurado?": {
       "main": [
         [
           {
-            "node": "Enviar resumo ao Teams",
+            "node": "Enviar resumo por e-mail",
             "type": "main",
             "index": 0
           }
@@ -197,7 +203,7 @@
         ]
       ]
     },
-    "Enviar resumo ao Teams": {
+    "Enviar resumo por e-mail": {
       "main": [
         [
           {

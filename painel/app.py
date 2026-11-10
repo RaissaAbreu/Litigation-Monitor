@@ -21,7 +21,7 @@ st.set_page_config(page_title="Litigation Monitor", page_icon="⚖️", layout="
 estilo.aplicar()
 banco.inicializar()
 
-# Link vindo do Teams: ?processo=0000000-00.0000.0.00.0000 abre direto as movimentações.
+# Link vindo do e-mail de alerta: ?processo=0000000-00.0000.0.00.0000 abre direto as movimentações.
 if (numero := st.query_params.get("processo")) and not st.session_state.get("link_consumido"):
     st.session_state["link_consumido"] = True
     try:
@@ -62,10 +62,10 @@ with st.sidebar:
             else "API Pública oficial do CNJ · dados públicos")
     estilo.html(f'<div class="lm-nota-lateral"><span class="ponto"></span>{nota}</div>')
 
-    teams_ok = bool(config.teams_webhook())
+    email_ok = bool(config.email_remetente())
     estilo.html(f"""<div class="lm-sep"></div><div class="lm-rotulo-lateral">Integrações</div>
       <div class="lm-nota-lateral"><span class="ponto ok"></span>n8n: consulta diária, resumo e relatório semanal</div>
-      <div class="lm-nota-lateral"><span class="ponto {'ok' if teams_ok else 'off'}"></span>Teams: {'canal configurado' if teams_ok else 'sem canal configurado'}</div>""")
+      <div class="lm-nota-lateral"><span class="ponto {'ok' if email_ok else 'off'}"></span>Gmail: {'alertas para ' + config.email_destino() if email_ok else 'não configurado'}</div>""")
 
     estilo.html(f"""<div class="lm-sep"></div><div class="lm-rotulo-lateral">Contencioso</div>
       <div class="lm-rodape-lateral"><div class="titulo">Monitoramento automatizado de processos.</div>

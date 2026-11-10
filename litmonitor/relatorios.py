@@ -1,4 +1,4 @@
-"""Relatórios periódicos: processos que exigem atenção (PDF e Excel) e resumo diário para o Teams."""
+"""Relatórios periódicos: processos que exigem atenção (PDF e Excel) e resumo diário por e-mail."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import pandas as pd
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
-from . import VERSAO, banco, config, monitor, teams
+from . import VERSAO, banco, config, mensagens, monitor
 from .monitor import formatar_data
 
 TIPOS = {"semanal": "Relatório semanal", "sob_demanda": "Relatório sob demanda"}
@@ -291,12 +291,11 @@ def caminho_arquivo(relatorio: dict[str, Any], formato: str) -> Path:
 
 
 def notificacao_relatorio(relatorio: dict[str, Any], ind: dict[str, Any]) -> dict[str, Any]:
-    return {"tipo": "relatorio_semanal", "webhook_url": config.teams_webhook(),
-            "payload": teams.cartao_relatorio(relatorio, ind)}
+    return {"tipo": "relatorio_semanal", "email": mensagens.email_relatorio(relatorio, ind)}
 
 
 def resumo_diario(referencia: date | None = None, limite: int = 8) -> dict[str, Any]:
-    """Cartão do resumo diário (o n8n envia ao Teams toda manhã)."""
+    """E-mail do resumo diário (o n8n envia toda manhã)."""
     referencia = referencia or monitor.hoje()
     ind = monitor.indicadores(referencia)
     itens = []
@@ -313,6 +312,6 @@ def resumo_diario(referencia: date | None = None, limite: int = 8) -> dict[str, 
     return {
         "tipo": "resumo_diario",
         "quantidade": ind["exigem_atencao"],
-        "webhook_url": config.teams_webhook(),
-        "payload": teams.cartao_resumo_diario(ind, itens[:limite], formatar_data(referencia)),
+        "itens": itens[:limite],
+        "email": mensagens.email_resumo_diario(ind, itens[:limite], formatar_data(referencia)),
     }

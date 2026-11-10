@@ -80,3 +80,12 @@ def test_chave_estavel_e_sensivel_aos_complementos():
     b = mov(970, "Audiência", comps=[("situacao_da_audiencia", "realizada")])
     assert cl.chave_movimento(a) == cl.chave_movimento(dict(a))
     assert cl.chave_movimento(a) != cl.chave_movimento(b)
+
+
+def test_intimacoes_do_mesmo_dia_geram_um_unico_alerta():
+    lote = cl.classificar_lote([
+        mov(12265, "Expedida/certificada", "2026-08-01T10:00:00"),
+        mov(12265, "Expedida/certificada", "2026-08-01T10:00:05", comps=[("destinatario", "outra parte")]),
+        mov(12265, "Expedida/certificada", "2026-08-03T09:00:00"),
+    ])
+    assert [r.relevancia for _, r in lote] == ["Média", "Baixa", "Média"]

@@ -1,10 +1,10 @@
 """API HTTP consumida pelo n8n (e útil para integrações).
 
     POST /consultas                 consulta todos os processos ativos na fonte (relê a planilha, se configurada)
-    GET  /alertas/pendentes         alertas que o n8n deve enviar ao Teams agora
+    GET  /alertas/pendentes         alertas que o n8n deve enviar por e-mail agora
     POST /notificacoes              o n8n informa o resultado do envio (para não repetir alertas)
-    GET  /relatorios/resumo-diario  cartão do resumo diário para o Teams
-    POST /relatorios/semanal        gera o relatório semanal (PDF + Excel) e devolve o cartão para o Teams
+    GET  /relatorios/resumo-diario  e-mail do resumo diário
+    POST /relatorios/semanal        gera o relatório semanal (PDF + Excel) e devolve o e-mail com os links
     GET  /relatorios/{id}/pdf|xlsx  download dos arquivos
 """
 
@@ -49,7 +49,7 @@ class NotificacaoEntrada(BaseModel):
     situacao: Literal[monitor.SITUACOES_NOTIFICACAO]  # type: ignore[valid-type]
     movimentacao_id: int | None = None
     processo_id: int | None = None
-    destino: str = "Microsoft Teams"
+    destino: str = "E-mail"
 
 
 def _importacao_como_dict(r: monitor.ResultadoImportacao) -> dict[str, Any]:

@@ -94,8 +94,8 @@
           },
           "conditions": [
             {
-              "id": "canal-teams",
-              "leftValue": "={{ $json.webhook_url }}",
+              "id": "canal-email",
+              "leftValue": "={{ $json.email.para }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -108,34 +108,40 @@
         },
         "options": {}
       },
-      "name": "Tem canal do Teams?",
+      "name": "Tem e-mail configurado?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
         960,
         300
       ],
-      "id": "241e2d0b-6a12-5526-9ef3-e24799f75e1e"
+      "id": "48edec50-cdbb-5daf-a94d-6d6435138e1b"
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $json.webhook_url }}",
+        "fromEmail": "={{ $json.email.de }}",
+        "toEmail": "={{ $json.email.para }}",
+        "subject": "={{ $json.email.assunto }}",
+        "emailFormat": "html",
+        "html": "={{ $json.email.html }}",
         "options": {
-          "timeout": 30000
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.payload) }}"
+          "appendAttribution": false
+        }
       },
-      "name": "Enviar alerta ao Teams",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "Enviar alerta por e-mail",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
       "position": [
         1200,
         200
       ],
-      "id": "1ecbb868-159e-5d14-a774-aa14113039c9",
+      "id": "00a70f1e-772b-5b86-ae5f-6fb290dd7c9f",
+      "credentials": {
+        "smtp": {
+          "id": "LitMonitorGmail01",
+          "name": "Gmail (Litigation Monitor)"
+        }
+      },
       "onError": "continueRegularOutput"
     },
     {
@@ -147,7 +153,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ tipo: $('Separar alertas').item.json.tipo, situacao: ($json.error ? 'falha' : 'enviada'), movimentacao_id: $('Separar alertas').item.json.movimentacao_id, destino: 'Microsoft Teams' }) }}"
+        "jsonBody": "={{ JSON.stringify({ tipo: $('Separar alertas').item.json.tipo, situacao: ($json.error ? 'falha' : 'enviada'), movimentacao_id: $('Separar alertas').item.json.movimentacao_id, destino: 'Gmail' }) }}"
       },
       "name": "Registrar envio",
       "type": "n8n-nodes-base.httpRequest",
@@ -167,7 +173,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ tipo: $json.tipo, situacao: 'sem_canal', movimentacao_id: $json.movimentacao_id, destino: 'Microsoft Teams' }) }}"
+        "jsonBody": "={{ JSON.stringify({ tipo: $json.tipo, situacao: 'sem_canal', movimentacao_id: $json.movimentacao_id, destino: 'Gmail' }) }}"
       },
       "name": "Registrar sem canal",
       "type": "n8n-nodes-base.httpRequest",
@@ -228,18 +234,18 @@
       "main": [
         [
           {
-            "node": "Tem canal do Teams?",
+            "node": "Tem e-mail configurado?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Tem canal do Teams?": {
+    "Tem e-mail configurado?": {
       "main": [
         [
           {
-            "node": "Enviar alerta ao Teams",
+            "node": "Enviar alerta por e-mail",
             "type": "main",
             "index": 0
           }
@@ -253,7 +259,7 @@
         ]
       ]
     },
-    "Enviar alerta ao Teams": {
+    "Enviar alerta por e-mail": {
       "main": [
         [
           {

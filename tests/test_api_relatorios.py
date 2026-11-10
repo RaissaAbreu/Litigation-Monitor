@@ -31,12 +31,12 @@ def test_fluxo_do_n8n(cliente, monkeypatch):
     assert cliente.get("/alertas/pendentes").json()["quantidade"] == 0
 
     resumo = cliente.get("/relatorios/resumo-diario").json()
-    assert resumo["quantidade"] == 7 and resumo["payload"]["type"] == "message"
+    assert resumo["quantidade"] == 7 and "Resumo diário" in resumo["email"]["assunto"]
     assert cliente.post("/notificacoes", json={"tipo": "resumo_diario", "situacao": "enviada"}).status_code == 201
 
     semanal = cliente.post("/relatorios/semanal").json()
     rid = semanal["relatorio"]["id"]
-    assert semanal["payload"]["attachments"][0]["content"]["actions"][0]["url"].endswith(f"/relatorios/{rid}/pdf")
+    assert f"/relatorios/{rid}/pdf" in semanal["email"]["html"]
     pdf = cliente.get(f"/relatorios/{rid}/pdf")
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
     assert cliente.get(f"/relatorios/{rid}/xlsx").status_code == 200

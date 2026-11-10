@@ -134,7 +134,7 @@ def renderizar() -> None:
         if not notificacoes:
             st.caption("Nenhum alerta registrado para este processo.")
         else:
-            situacao = {"enviada": "Enviada", "sem_canal": "Sem canal configurado", "falha": "Falha no envio"}
+            situacao = {"enviada": "Enviada", "sem_canal": "E-mail não configurado", "falha": "Falha no envio"}
             st.dataframe(pd.DataFrame([{
                 "Quando": c.data_hora(n["criado_em"]), "Tipo": monitor.TIPOS_NOTIFICACAO.get(n["tipo"], n["tipo"]),
                 "Movimentação": n["descricao"] or "—", "Situação": situacao.get(n["situacao"], n["situacao"]),

@@ -6,6 +6,7 @@ from html import escape
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 from litmonitor import banco, fontes, relatorios
 from painel import componentes as c
@@ -25,7 +26,7 @@ def _baixar(relatorio: dict, chave: str) -> None:
 
 def renderizar() -> None:
     c.cabecalho("Relatórios", "Processos que exigem atenção, em PDF e Excel — sob demanda, toda semana pelo n8n "
-                "e em resumo diário no Teams.")
+                "e em resumo diário por e-mail.")
     c.mensagem_pendente()
 
     estilo.secao("Relatório / 05", "Gerar relatório agora",
@@ -57,18 +58,20 @@ def renderizar() -> None:
         st.dataframe(tabelas["Exigem atenção"], hide_index=True, width="stretch")
 
     st.write("")
-    estilo.secao("Teams / 07", "Resumo diário", "Prévia do cartão que o n8n envia ao Teams toda manhã, às 7h30.")
+    estilo.secao("E-mail / 07", "Resumo diário", "Prévia do e-mail que o n8n envia nos dias úteis, às 7h30.")
     resumo = relatorios.resumo_diario()
-    corpo = resumo["payload"]["attachments"][0]["content"]["body"]
-    fatos = next((b["facts"] for b in corpo if b.get("type") == "FactSet"), [])
     with st.container(border=True, key="cartao-resumo-diario"):
-        estilo.titulo_cartao(None, corpo[1]["text"])
-        if fatos:
+        estilo.titulo_cartao(None, resumo["email"]["assunto"])
+        destino = resumo["email"]["para"] or "Gmail não configurado"
+        estilo.html(f'<div class="lm-muted" style="margin-bottom:10px">Para: {escape(destino)}</div>')
+        if resumo["itens"]:
             estilo.html('<ul class="lm-arquivos">' + "".join(
-                f'<li><span class="n">{i}</span><div><div>{escape(f["title"])}</div><div class="det">{escape(f["value"])}</div></div></li>'
-                for i, f in enumerate(fatos, start=1)) + "</ul>")
+                f'<li><span class="n">{i}</span><div><div>{escape(f["titulo"])}</div><div class="det">{escape(f["texto"])}</div></div></li>'
+                for i, f in enumerate(resumo["itens"], start=1)) + "</ul>")
         else:
             estilo.html('<div class="lm-muted">Nenhum processo exige atenção hoje.</div>')
+        with st.expander("Ver o e-mail como será enviado"):
+            components.html(resumo["email"]["html"], height=620, scrolling=True)
 
     st.write("")
     estilo.secao("Arquivo / 08", "Relatórios gerados")

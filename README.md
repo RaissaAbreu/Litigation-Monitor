@@ -9,9 +9,9 @@ controles. O **LITIGATION MONITOR** automatiza esse caminho:
 4. **Classifica** as relevantes: sentença, acórdão, liminar/tutela, audiência, intimação, citação, trânsito em
    julgado, decisões, suspensão e arquivamento.
 5. **Estima prazos** em dias úteis (o analista confirma ou corrige no painel).
-6. **Gera alertas** no Microsoft Teams e no painel sobre eventos importantes e prazos próximos ou vencidos.
+6. **Gera alertas** por e-mail (Gmail) e no painel sobre eventos importantes e prazos próximos ou vencidos.
 7. **Atualiza o painel** de acompanhamento (Streamlit).
-8. **Gera relatórios** dos processos que exigem atenção: resumo diário no Teams, relatório semanal em PDF + Excel e
+8. **Gera relatórios** dos processos que exigem atenção: resumo diário por e-mail, relatório semanal em PDF + Excel e
    relatório sob demanda no painel.
 
 > Projeto de portfólio/demonstração. O modo demonstração usa apenas dados fictícios. O DataJud expõe somente dados
@@ -44,7 +44,7 @@ flowchart LR
     API --> R[Novas movimentações · classificação · prazos]
     R --> DB[(SQLite)]
     S1 -->|GET /alertas/pendentes| API
-    S1 -->|Adaptive Card| T[Microsoft Teams]
+    S1 -->|e-mail HTML| T[Gmail]
     S2[n8n · Resumo diário<br/>dias úteis 7h30] -->|GET /relatorios/resumo-diario| API
     S2 --> T
     S3[n8n · Relatório semanal<br/>segundas 8h] -->|POST /relatorios/semanal| API
@@ -56,7 +56,7 @@ flowchart LR
 |---|---|---|
 | Processamento e regras | Python + pandas | `litmonitor/` |
 | Fonte de dados autorizada | API Pública do DataJud (CNJ) · modo demonstração | `litmonitor/fontes.py` |
-| Agendamento e notificações | n8n + Microsoft Teams | `n8n/workflows/` |
+| Agendamento e notificações | n8n + Gmail (SMTP) | `n8n/workflows/` |
 | Armazenamento | SQLite | `litmonitor/banco.py` |
 | Relatórios | fpdf2 (PDF) · openpyxl (Excel) | `litmonitor/relatorios.py` |
 | Painel | Streamlit | `painel/` |
@@ -66,7 +66,7 @@ flowchart LR
 ### Com Docker Compose (recomendado)
 
 ```bash
-cp .env.example .env                                # configure o webhook do Teams e a fonte
+cp .env.example .env                                # configure o Gmail e a fonte
 cp minha_carteira.xlsx planilhas/processos.xlsx     # opcional: planilha relida a cada consulta
 docker compose up -d --build
 ```
@@ -77,7 +77,8 @@ docker compose up -d --build
 | API (documentação interativa) | http://localhost:8000/docs |
 | n8n | http://localhost:5678 |
 
-Na primeira execução o serviço `n8n-importar` importa e ativa os três workflows. Ao abrir o n8n, crie a conta de
+Na primeira execução o serviço `n8n-importar` cria a credencial do Gmail (a partir do `.env`), importa e ativa os
+três workflows. Ao abrir o n8n, crie a conta de
 proprietário (pedida pelo próprio n8n). No painel, clique em **Carregar carteira demonstrativa** para conhecer as telas.
 
 ### Sem Docker (só painel e API)
@@ -173,7 +174,7 @@ recalculado.
 | Verificar | processo não localizado ou falha na consulta |
 | Em dia | nada pendente |
 
-**Alertas (Teams e painel)**
+**Alertas (e-mail e painel)**
 
 | Alerta | Quando |
 |---|---|
@@ -186,25 +187,38 @@ recalculado.
 
 Uma pendência sai dos alertas quando o analista registra **Concluída** ou **Sem providência**.
 
-## Configurando o Microsoft Teams
+## Configurando os alertas por e-mail (Gmail)
 
-1. No canal: **⋯ › Workflows › “Post to a channel when a webhook request is received”** e copie a URL.
-2. Informe-a em `TEAMS_WEBHOOK_URL` no `.env`.
-3. Sem canal configurado, o alerta é registrado como “sem canal” e continua visível no painel.
+Funciona com conta Gmail **pessoal**.
 
-Os cartões têm o botão **Abrir no painel** (`LM_URL_PAINEL/?processo=<número>`), que abre direto as movimentações do
-processo. O cartão semanal aponta para `LM_URL_API/relatorios/<id>/pdf` e `/xlsx` — ajuste `LM_URL_API` para um
-endereço acessível pela equipe.
+1. Ative a **verificação em duas etapas** na conta Google (https://myaccount.google.com/security).
+2. Crie uma **senha de app** em https://myaccount.google.com/apppasswords (nome: "Litigation Monitor"). O Google
+   mostra 16 letras — essa é a senha usada pelo sistema, não a senha do Gmail.
+3. No `.env`:
+   ```
+   GMAIL_USUARIO=seu.email@gmail.com
+   GMAIL_SENHA_APP=abcd efgh ijkl mnop
+   EMAIL_ALERTAS=                       # vazio = envia para o próprio GMAIL_USUARIO
+   ```
+4. `docker compose up -d` — o `n8n-importar` atualiza a credencial **Gmail (Litigation Monitor)** no n8n.
+
+Sem Gmail configurado, o alerta é registrado como “e-mail não configurado” e continua visível no painel. Os e-mails
+têm o botão **Abrir no painel** (`LM_URL_PAINEL/?processo=<número>`), que abre direto as movimentações do processo; o
+e-mail semanal aponta para `LM_URL_API/relatorios/<id>/pdf` e `/xlsx`.
+
+Se a credencial não for criada automaticamente: no n8n, **Credentials › Add credential › SMTP** com usuário = seu
+Gmail, senha = senha de app, host `smtp.gmail.com`, porta `465`, SSL/TLS ligado; depois selecione-a no nó de e-mail
+de cada workflow.
 
 ## API
 
 | Rota | Para quê |
 |---|---|
 | `POST /consultas` | relê a planilha (`LM_PLANILHA`, se houver) e consulta todos os processos ativos |
-| `GET /alertas/pendentes` | alertas que ainda não foram enviados, com o cartão do Teams pronto |
+| `GET /alertas/pendentes` | alertas que ainda não foram enviados, com o e-mail pronto (assunto, destino, HTML) |
 | `POST /notificacoes` | registra o resultado do envio (`enviada`, `sem_canal`, `falha`) |
-| `GET /relatorios/resumo-diario` | cartão do resumo diário |
-| `POST /relatorios/semanal` | gera PDF + Excel e devolve o cartão com os links |
+| `GET /relatorios/resumo-diario` | e-mail do resumo diário |
+| `POST /relatorios/semanal` | gera PDF + Excel e devolve o e-mail com os links |
 | `GET /relatorios/{id}/pdf` · `/xlsx` | download |
 | `POST /processos/importar` | importa uma planilha em Base64 |
 | `GET /processos` · `GET /saude` | consulta |
@@ -219,7 +233,7 @@ litmonitor/           núcleo em Python
   classificacao.py    regras de classificação e vínculo intimação → evento
   calendario.py       dias úteis, feriados e recesso
   monitor.py          importação, consulta, prazos, nível de atenção e alertas
-  teams.py            cartões (Adaptive Cards)
+  mensagens.py        e-mails de alerta, resumo e relatório (HTML)
   relatorios.py       PDF, Excel e resumo diário
   banco.py · api.py · seed.py
 painel/               Streamlit (app.py, estilo.py, componentes.py, paginas/)

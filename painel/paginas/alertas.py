@@ -27,7 +27,7 @@ def _urgencia(m: dict) -> tuple:
 
 def renderizar() -> None:
     c.cabecalho("Alertas e prazos", "Registre a providência de cada movimentação relevante. "
-                "O n8n avisa no Teams sobre eventos novos e prazos próximos ou vencidos.")
+                "O n8n avisa por e-mail sobre eventos novos e prazos próximos ou vencidos.")
     c.mensagem_pendente()
 
     abertas = banco.listar_movimentacoes(apenas_abertas=True)
@@ -61,17 +61,17 @@ def renderizar() -> None:
 
     st.write("")
     estilo.secao("Notificações / 05", "Próximo envio do n8n",
-                 "Alertas ainda não enviados. O fluxo “Consulta diária” envia esta lista ao Teams logo após consultar a fonte.")
+                 "Alertas ainda não enviados. O fluxo “Consulta diária” envia esta lista por e-mail logo após consultar a fonte.")
     pendentes = monitor.alertas_pendentes()
     with st.container(border=True, key="cartao-pendentes"):
         if not pendentes:
             estilo.html('<div class="lm-muted">Nenhum alerta pendente de envio.</div>')
         else:
-            canal = estilo.badge("Canal configurado", "verde") if config.teams_webhook() else \
-                estilo.badge("Sem canal do Teams", "ambar")
+            canal = estilo.badge("Gmail configurado", "verde") if config.email_remetente() else \
+                estilo.badge("Gmail não configurado", "ambar")
             estilo.html('<ul class="lm-arquivos">' + "".join(
                 f'<li><span class="n">{i}</span><div><div>{escape(a["numero"])} · {escape(a["tipo_descricao"])}</div>'
-                f'<div class="det">Para: {escape(a["destinatario"])}</div></div><span class="dir">{canal}</span></li>'
+                f'<div class="det">{escape(a["email"]["assunto"])}</div></div><span class="dir">{canal}</span></li>'
                 for i, a in enumerate(pendentes, start=1)) + "</ul>")
 
     st.write("")
@@ -80,7 +80,7 @@ def renderizar() -> None:
     if not notificacoes:
         st.caption("Nenhuma notificação registrada ainda.")
         return
-    situacao = {"enviada": "Enviada", "sem_canal": "Sem canal configurado", "falha": "Falha no envio"}
+    situacao = {"enviada": "Enviada", "sem_canal": "E-mail não configurado", "falha": "Falha no envio"}
     st.dataframe(pd.DataFrame([{
         "Quando": c.data_hora(n["criado_em"]), "Tipo": monitor.TIPOS_NOTIFICACAO.get(n["tipo"], n["tipo"]),
         "Processo": n["numero"] or "—", "Movimentação": n["rotulo"] or "—",

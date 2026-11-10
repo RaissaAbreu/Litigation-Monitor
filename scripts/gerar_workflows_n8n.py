@@ -9,6 +9,8 @@ import uuid
 from pathlib import Path
 
 API = "http://api:8000"  # nome do serviço no docker-compose
+# Credencial SMTP do Gmail criada automaticamente pelo serviço n8n-importar (n8n/importar.sh)
+CREDENCIAL_GMAIL = {"smtp": {"id": "LitMonitorGmail01", "name": "Gmail (Litigation Monitor)"}}
 DESTINO = Path(__file__).resolve().parent.parent / "n8n" / "workflows"
 
 
@@ -33,11 +35,23 @@ def manual(posicao):
     return no("Executar agora (teste)", "n8n-nodes-base.manualTrigger", 1, posicao, {})
 
 
+def enviar_email(nome, posicao, campo="$json.email"):
+    """Envia o e-mail montado pela API (remetente, destino, assunto e HTML) pelo Gmail."""
+    return no(nome, "n8n-nodes-base.emailSend", 2.1, posicao, {
+        "fromEmail": "={{ " + campo + ".de }}",
+        "toEmail": "={{ " + campo + ".para }}",
+        "subject": "={{ " + campo + ".assunto }}",
+        "emailFormat": "html",
+        "html": "={{ " + campo + ".html }}",
+        "options": {"appendAttribution": False},
+    }, credentials=CREDENCIAL_GMAIL, onError="continueRegularOutput")
+
+
 def tem_canal(nome, posicao, expressao):
     return no(nome, "n8n-nodes-base.if", 2, posicao, {
         "conditions": {
             "options": {"caseSensitive": True, "leftValue": "", "typeValidation": "loose"},
-            "conditions": [{"id": "canal-teams", "leftValue": expressao, "rightValue": "",
+            "conditions": [{"id": "canal-email", "leftValue": expressao, "rightValue": "",
                             "operator": {"type": "string", "operation": "notEmpty", "singleValue": True}}],
             "combinator": "and",
         },
@@ -55,7 +69,7 @@ def se(sim, nao):
 
 def registrar(nome, posicao, tipo, situacao, movimentacao_id="null"):
     corpo = ("={{ JSON.stringify({ tipo: " + tipo + ", situacao: " + situacao + ", movimentacao_id: "
-             + movimentacao_id + ", destino: 'Microsoft Teams' }) }}")
+             + movimentacao_id + ", destino: 'Gmail' }) }}")
     return http(nome, posicao, f"{API}/notificacoes", corpo)
 
 
@@ -74,9 +88,8 @@ def consulta_diaria():
              "={{ JSON.stringify({ reler_planilha: true }) }}", timeout=1800000),
         http("Buscar alertas pendentes", [480, 300], f"{API}/alertas/pendentes", metodo="GET"),
         no(sep, "n8n-nodes-base.splitOut", 1, [720, 300], {"fieldToSplitOut": "alertas", "options": {}}),
-        tem_canal("Tem canal do Teams?", [960, 300], "={{ $json.webhook_url }}"),
-        http("Enviar alerta ao Teams", [1200, 200], "={{ $json.webhook_url }}", "={{ JSON.stringify($json.payload) }}",
-             onError="continueRegularOutput"),
+        tem_canal("Tem e-mail configurado?", [960, 300], "={{ $json.email.para }}"),
+        enviar_email("Enviar alerta por e-mail", [1200, 200]),
         registrar("Registrar envio", [1440, 200], f"$('{sep}').item.json.tipo", "($json.error ? 'falha' : 'enviada')",
                   f"$('{sep}').item.json.movimentacao_id"),
         registrar("Registrar sem canal", [1200, 420], "$json.tipo", "'sem_canal'", "$json.movimentacao_id"),
@@ -86,9 +99,9 @@ def consulta_diaria():
         "Executar agora (teste)": {"main": liga("Consultar processos (API)")},
         "Consultar processos (API)": {"main": liga("Buscar alertas pendentes")},
         "Buscar alertas pendentes": {"main": liga(sep)},
-        sep: {"main": liga("Tem canal do Teams?")},
-        "Tem canal do Teams?": {"main": se("Enviar alerta ao Teams", "Registrar sem canal")},
-        "Enviar alerta ao Teams": {"main": liga("Registrar envio")},
+        sep: {"main": liga("Tem e-mail configurado?")},
+        "Tem e-mail configurado?": {"main": se("Enviar alerta por e-mail", "Registrar sem canal")},
+        "Enviar alerta por e-mail": {"main": liga("Registrar envio")},
     }
     return fluxo("LitMonitorConsulta01", "LITIGATION MONITOR — Consulta diária e alertas", nos, conexoes)
 
@@ -98,20 +111,19 @@ def resumo_diario():
         agendamento("Dias úteis às 7h30", [0, 200], "30 7 * * 1-5"),
         manual([0, 400]),
         http("Montar resumo (API)", [240, 300], f"{API}/relatorios/resumo-diario", metodo="GET"),
-        tem_canal("Tem canal do Teams?", [480, 300], "={{ $json.webhook_url }}"),
-        http("Enviar resumo ao Teams", [720, 200], "={{ $json.webhook_url }}", "={{ JSON.stringify($json.payload) }}",
-             onError="continueRegularOutput"),
+        tem_canal("Tem e-mail configurado?", [480, 300], "={{ $json.email.para }}"),
+        enviar_email("Enviar resumo por e-mail", [720, 200]),
         registrar("Registrar envio", [960, 200], "'resumo_diario'", "($json.error ? 'falha' : 'enviada')"),
         registrar("Registrar sem canal", [720, 420], "'resumo_diario'", "'sem_canal'"),
     ]
     conexoes = {
         "Dias úteis às 7h30": {"main": liga("Montar resumo (API)")},
         "Executar agora (teste)": {"main": liga("Montar resumo (API)")},
-        "Montar resumo (API)": {"main": liga("Tem canal do Teams?")},
-        "Tem canal do Teams?": {"main": se("Enviar resumo ao Teams", "Registrar sem canal")},
-        "Enviar resumo ao Teams": {"main": liga("Registrar envio")},
+        "Montar resumo (API)": {"main": liga("Tem e-mail configurado?")},
+        "Tem e-mail configurado?": {"main": se("Enviar resumo por e-mail", "Registrar sem canal")},
+        "Enviar resumo por e-mail": {"main": liga("Registrar envio")},
     }
-    return fluxo("LitMonitorResumo01", "LITIGATION MONITOR — Resumo diário no Teams", nos, conexoes)
+    return fluxo("LitMonitorResumo01", "LITIGATION MONITOR — Resumo diário por e-mail", nos, conexoes)
 
 
 def relatorio_semanal():
@@ -119,18 +131,17 @@ def relatorio_semanal():
         agendamento("Segundas às 8h", [0, 200], "0 8 * * 1"),
         manual([0, 400]),
         http("Gerar relatório semanal (API)", [240, 300], f"{API}/relatorios/semanal", timeout=300000),
-        tem_canal("Tem canal do Teams?", [480, 300], "={{ $json.webhook_url }}"),
-        http("Enviar relatório ao Teams", [720, 200], "={{ $json.webhook_url }}",
-             "={{ JSON.stringify($json.payload) }}", onError="continueRegularOutput"),
+        tem_canal("Tem e-mail configurado?", [480, 300], "={{ $json.email.para }}"),
+        enviar_email("Enviar relatório por e-mail", [720, 200]),
         registrar("Registrar envio", [960, 200], "'relatorio_semanal'", "($json.error ? 'falha' : 'enviada')"),
         registrar("Registrar sem canal", [720, 420], "'relatorio_semanal'", "'sem_canal'"),
     ]
     conexoes = {
         "Segundas às 8h": {"main": liga("Gerar relatório semanal (API)")},
         "Executar agora (teste)": {"main": liga("Gerar relatório semanal (API)")},
-        "Gerar relatório semanal (API)": {"main": liga("Tem canal do Teams?")},
-        "Tem canal do Teams?": {"main": se("Enviar relatório ao Teams", "Registrar sem canal")},
-        "Enviar relatório ao Teams": {"main": liga("Registrar envio")},
+        "Gerar relatório semanal (API)": {"main": liga("Tem e-mail configurado?")},
+        "Tem e-mail configurado?": {"main": se("Enviar relatório por e-mail", "Registrar sem canal")},
+        "Enviar relatório por e-mail": {"main": liga("Registrar envio")},
     }
     return fluxo("LitMonitorSemanal01", "LITIGATION MONITOR — Relatório semanal", nos, conexoes)
 

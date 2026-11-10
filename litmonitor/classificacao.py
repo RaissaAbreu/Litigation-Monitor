@@ -234,6 +234,7 @@ def classificar_lote(movimentos: list[dict[str, Any]]) -> list[tuple[dict[str, A
     ultimo_evento: tuple[dict[str, Any], Classificacao] | None = None
     ultima_dje: date | None = None
     ultimo_encerramento: tuple[str, date] | None = None
+    ultima_intimacao: date | None = None
 
     for mov in ordenados:
         cl = classificar(mov)
@@ -259,6 +260,11 @@ def classificar_lote(movimentos: list[dict[str, Any]]) -> list[tuple[dict[str, A
                                f"Intimação referente a {cl_ev.rotulo.lower()} de {data_ev}; o prazo está no próprio evento.",
                                vinculada_a=f"{cl_ev.rotulo} de {data_ev}")
             ultimo_evento = None
+        elif cl.categoria == "intimacao" and ultima_intimacao == evento:
+            # Várias intimações no mesmo dia (uma por parte/advogado) são o mesmo ato de comunicação
+            cl = Classificacao("expediente", "Intimação · mesma data", "Baixa",
+                               "Outra intimação do mesmo dia; a providência está na primeira.",
+                               vinculada_a=f"Intimação de {evento.strftime('%d/%m/%Y')}")
         elif cl.categoria == "arquivamento" and ultimo_encerramento \
                 and timedelta(0) <= evento - ultimo_encerramento[1] <= timedelta(days=DIAS_VINCULO_INTIMACAO):
             # Baixa e arquivamento logo após o trânsito em julgado (ou outra baixa) são o mesmo encerramento
@@ -266,6 +272,8 @@ def classificar_lote(movimentos: list[dict[str, Any]]) -> list[tuple[dict[str, A
                                "Parte do mesmo encerramento; a providência está no evento principal.",
                                vinculada_a=f"{ultimo_encerramento[0]} de {ultimo_encerramento[1].strftime('%d/%m/%Y')}")
 
+        if cl.categoria == "intimacao":
+            ultima_intimacao = evento
         if cl.categoria in ("transito", "arquivamento"):
             ultimo_encerramento = (cl.rotulo, evento)
         if codigo in INTIMACAO_DJE:

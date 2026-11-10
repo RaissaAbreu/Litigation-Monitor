@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from . import banco, classificacao, config, fontes, teams
+from . import banco, classificacao, config, fontes, mensagens
 from .classificacao import PESO_RELEVANCIA
 from .planilha import LeituraPlanilha
 
@@ -357,9 +357,8 @@ def montar_notificacao(mov: dict[str, Any], tipo: str, referencia: date | None =
         "numero": mov["numero"],
         "tipo": tipo,
         "tipo_descricao": TIPOS_NOTIFICACAO[tipo],
-        "webhook_url": config.teams_webhook(),
-        "destinatario": mov.get("responsavel") or "Canal da equipe",
-        "payload": teams.cartao_movimentacao(mov, tipo, texto_prazo(mov, referencia)),
+        "destinatario": mov.get("responsavel") or "Equipe",
+        "email": mensagens.email_movimentacao(mov, tipo, texto_prazo(mov, referencia)),
     }
 
 
@@ -397,7 +396,7 @@ def alertas_pendentes(agora: datetime | None = None) -> list[dict[str, Any]]:
 
 
 def registrar_notificacao(tipo: str, situacao: str, movimentacao_id: int | None = None,
-                          processo_id: int | None = None, destino: str = "Microsoft Teams") -> int:
+                          processo_id: int | None = None, destino: str = "E-mail") -> int:
     if tipo not in TIPOS_NOTIFICACAO:
         raise ValueError(f"Tipo de notificação inválido: {tipo}")
     if situacao not in SITUACOES_NOTIFICACAO:
