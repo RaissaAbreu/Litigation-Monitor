@@ -138,7 +138,7 @@ def renderizar() -> None:
         "Próximo prazo": monitor.formatar_data(p["proximo_prazo"]["prazo"]) if p["proximo_prazo"] else "",
         "Última movimentação": monitor.formatar_data(p["ultima_movimentacao"]),
         "Consulta": monitor.SITUACOES_CONSULTA.get(p["situacao_consulta"], p["situacao_consulta"]),
-    } for p in filtrados]), hide_index=True, use_container_width=True)
+    } for p in filtrados]), hide_index=True, width="stretch")
 
     a1, a2, a3, _ = st.columns([0.4, 0.2, 0.2, 0.2])
     opcoes = {p["id"]: f"{p['numero']} · {p['cliente'] or 'sem cliente'}" for p in filtrados}

@@ -54,7 +54,7 @@ def renderizar() -> None:
     if tabelas["Exigem atenção"].empty:
         st.caption("Nenhum processo exige atenção no momento.")
     else:
-        st.dataframe(tabelas["Exigem atenção"], hide_index=True, use_container_width=True)
+        st.dataframe(tabelas["Exigem atenção"], hide_index=True, width="stretch")
 
     st.write("")
     estilo.secao("Teams / 07", "Resumo diário", "Prévia do cartão que o n8n envia ao Teams toda manhã, às 7h30.")
@@ -90,7 +90,7 @@ def renderizar() -> None:
             "Início": c.data_hora(q["iniciada_em"]), "Fonte": fontes.FONTES.get(q["fonte"], q["fonte"]),
             "Origem": q["origem"], "Processos": q["processos"], "Consultados": q["sucesso"],
             "Não localizados": q["nao_localizados"], "Falhas": q["erros"], "Novas": q["novas"], "Relevantes": q["relevantes"],
-        } for q in consultas]), hide_index=True, use_container_width=True)
+        } for q in consultas]), hide_index=True, width="stretch")
     else:
         st.caption("Nenhuma consulta realizada ainda.")
 

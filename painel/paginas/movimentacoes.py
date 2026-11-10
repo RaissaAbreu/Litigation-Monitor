@@ -138,7 +138,7 @@ def renderizar() -> None:
             st.dataframe(pd.DataFrame([{
                 "Quando": c.data_hora(n["criado_em"]), "Tipo": monitor.TIPOS_NOTIFICACAO.get(n["tipo"], n["tipo"]),
                 "Movimentação": n["descricao"] or "—", "Situação": situacao.get(n["situacao"], n["situacao"]),
-            } for n in notificacoes]), hide_index=True, use_container_width=True)
+            } for n in notificacoes]), hide_index=True, width="stretch")
 
     with abas[4]:
         with st.container(border=True, key="cartao-historico"):
