@@ -1,0 +1,218 @@
+{
+  "id": "LitMonitorResumo01",
+  "name": "LITIGATION MONITOR — Resumo diário no Teams",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 7 * * 1-5"
+            }
+          ]
+        }
+      },
+      "name": "Dias úteis às 7h30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ],
+      "id": "2767f205-8842-534c-8faa-14656ba221f7"
+    },
+    {
+      "parameters": {},
+      "name": "Executar agora (teste)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        400
+      ],
+      "id": "9ecf1e62-9b8b-5106-8c03-4c5c6e0980f2"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://api:8000/relatorios/resumo-diario",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "name": "Montar resumo (API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        300
+      ],
+      "id": "15e56f88-d773-5fbc-a544-e362484425dd"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "canal-teams",
+              "leftValue": "={{ $json.webhook_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Tem canal do Teams?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ],
+      "id": "241e2d0b-6a12-5526-9ef3-e24799f75e1e"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.webhook_url }}",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}"
+      },
+      "name": "Enviar resumo ao Teams",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        200
+      ],
+      "id": "5e5cdd26-00c8-5186-83ac-4c3082adda4d",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/notificacoes",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tipo: 'resumo_diario', situacao: ($json.error ? 'falha' : 'enviada'), movimentacao_id: null, destino: 'Microsoft Teams' }) }}"
+      },
+      "name": "Registrar envio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        200
+      ],
+      "id": "e31fc8ee-9099-59f2-90f5-8ba8f47b8b43"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/notificacoes",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tipo: 'resumo_diario', situacao: 'sem_canal', movimentacao_id: null, destino: 'Microsoft Teams' }) }}"
+      },
+      "name": "Registrar sem canal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        420
+      ],
+      "id": "de1d8201-e40f-5c17-bfbd-628e5dbcf77d"
+    }
+  ],
+  "connections": {
+    "Dias úteis às 7h30": {
+      "main": [
+        [
+          {
+            "node": "Montar resumo (API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Executar agora (teste)": {
+      "main": [
+        [
+          {
+            "node": "Montar resumo (API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar resumo (API)": {
+      "main": [
+        [
+          {
+            "node": "Tem canal do Teams?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem canal do Teams?": {
+      "main": [
+        [
+          {
+            "node": "Enviar resumo ao Teams",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar sem canal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar resumo ao Teams": {
+      "main": [
+        [
+          {
+            "node": "Registrar envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "pinData": {}
+}

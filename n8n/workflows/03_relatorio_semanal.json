@@ -1,0 +1,218 @@
+{
+  "id": "LitMonitorSemanal01",
+  "name": "LITIGATION MONITOR — Relatório semanal",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "name": "Segundas às 8h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ],
+      "id": "d8c55595-665b-56f3-b654-8919252bb850"
+    },
+    {
+      "parameters": {},
+      "name": "Executar agora (teste)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        400
+      ],
+      "id": "9ecf1e62-9b8b-5106-8c03-4c5c6e0980f2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/relatorios/semanal",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "name": "Gerar relatório semanal (API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        300
+      ],
+      "id": "4f0bf33b-eff0-5e05-87f3-c33ce253df9c"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "canal-teams",
+              "leftValue": "={{ $json.webhook_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Tem canal do Teams?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ],
+      "id": "241e2d0b-6a12-5526-9ef3-e24799f75e1e"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.webhook_url }}",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}"
+      },
+      "name": "Enviar relatório ao Teams",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        200
+      ],
+      "id": "e9ae499d-7a73-51a0-a006-d35490b67432",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/notificacoes",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tipo: 'relatorio_semanal', situacao: ($json.error ? 'falha' : 'enviada'), movimentacao_id: null, destino: 'Microsoft Teams' }) }}"
+      },
+      "name": "Registrar envio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        200
+      ],
+      "id": "e31fc8ee-9099-59f2-90f5-8ba8f47b8b43"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/notificacoes",
+        "options": {
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tipo: 'relatorio_semanal', situacao: 'sem_canal', movimentacao_id: null, destino: 'Microsoft Teams' }) }}"
+      },
+      "name": "Registrar sem canal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        420
+      ],
+      "id": "de1d8201-e40f-5c17-bfbd-628e5dbcf77d"
+    }
+  ],
+  "connections": {
+    "Segundas às 8h": {
+      "main": [
+        [
+          {
+            "node": "Gerar relatório semanal (API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Executar agora (teste)": {
+      "main": [
+        [
+          {
+            "node": "Gerar relatório semanal (API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar relatório semanal (API)": {
+      "main": [
+        [
+          {
+            "node": "Tem canal do Teams?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem canal do Teams?": {
+      "main": [
+        [
+          {
+            "node": "Enviar relatório ao Teams",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar sem canal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar relatório ao Teams": {
+      "main": [
+        [
+          {
+            "node": "Registrar envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "pinData": {}
+}
