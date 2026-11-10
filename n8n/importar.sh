@@ -20,6 +20,9 @@ const credencial = [{
 }];
 fs.writeFileSync("/tmp/credencial-gmail.json", JSON.stringify(credencial));
 '
+if [ -z "$GMAIL_USUARIO" ] || [ -z "$GMAIL_SENHA_APP" ]; then
+  echo "AVISO: GMAIL_USUARIO ou GMAIL_SENHA_APP vazio no .env — os e-mails não serão enviados."
+fi
 if n8n import:credentials --input=/tmp/credencial-gmail.json; then
   echo "Credencial do Gmail importada."
 else
